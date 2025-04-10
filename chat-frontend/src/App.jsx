@@ -104,6 +104,7 @@ function App() {
 			username,
 			text: input,
 			color,
+			type: 'message',
 		});
 
 		setInput('');

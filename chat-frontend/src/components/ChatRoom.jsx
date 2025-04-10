@@ -1,7 +1,13 @@
 // src/components/ChatRoom.jsx
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import MessageBubble from './MessageBubble';
+import CommandAutocomplete from './CommandAutocomplete';
+
+const COMMANDS = [
+	{ name: '/me', description: 'Perform an action (e.g. /me waves)' },
+	{ name: '/roll', description: 'Roll dice (e.g. /roll 1d20+5)' },
+];
 
 export default function ChatRoom({
 	messages,
@@ -11,6 +17,10 @@ export default function ChatRoom({
 	onSend,
 }) {
 	const scrollRef = useRef(null);
+
+	const [showAutocomplete, setShowAutocomplete] = useState(false);
+	const [filteredCommands, setFilteredCommands] = useState([]);
+	const [activeCommandIndex, setActiveCommandIndex] = useState(0);
 
 	useEffect(() => {
 		const el = scrollRef.current;
@@ -23,6 +33,21 @@ export default function ChatRoom({
 			el.scrollTop = el.scrollHeight;
 		}
 	}, [messages]);
+
+	const handleInputChange = (e) => {
+		const value = e.target.value;
+		onInputChange(e); // still update parent state
+
+		if (value.startsWith('/')) {
+			const filtered = COMMANDS.filter((cmd) =>
+				cmd.name.startsWith(value.split(' ')[0])
+			);
+			setFilteredCommands(filtered);
+			setShowAutocomplete(filtered.length > 0);
+		} else {
+			setShowAutocomplete(false);
+		}
+	};
 
 	return (
 		<div className="bg-zinc-800 rounded-lg shadow-lg p-4 w-full max-w-2xl flex flex-col gap-4">
@@ -59,9 +84,42 @@ export default function ChatRoom({
 					maxRows={5}
 					className="flex-1 px-4 py-2 rounded bg-zinc-700 resize-none focus:outline-none focus:ring focus:ring-blue-500"
 					value={input}
-					onChange={onInputChange}
+					onChange={handleInputChange}
 					onKeyDown={(e) => {
-						if (e.key === 'Enter' && !e.shiftKey) {
+						if (showAutocomplete) {
+							if (e.key === 'ArrowDown') {
+								e.preventDefault();
+								setActiveCommandIndex(
+									(prev) =>
+										(prev + 1) % filteredCommands.length
+								);
+							} else if (e.key === 'ArrowUp') {
+								e.preventDefault();
+								setActiveCommandIndex(
+									(prev) =>
+										(prev - 1 + filteredCommands.length) %
+										filteredCommands.length
+								);
+							} else if (e.key === 'Enter') {
+								if (filteredCommands.length > 0) {
+									e.preventDefault();
+									const selected =
+										filteredCommands[activeCommandIndex];
+									if (selected) {
+										const currentWords = input.split(' ');
+										currentWords[0] = selected.name;
+										onInputChange({
+											target: {
+												value:
+													currentWords.join(' ') +
+													' ',
+											},
+										});
+										setShowAutocomplete(false);
+									}
+								}
+							}
+						} else if (e.key === 'Enter' && !e.shiftKey) {
 							e.preventDefault();
 							onSend();
 						}
@@ -75,6 +133,21 @@ export default function ChatRoom({
 					Send
 				</button>
 			</div>
+
+			{showAutocomplete && (
+				<CommandAutocomplete
+					commands={filteredCommands}
+					activeIndex={activeCommandIndex}
+					onSelect={(cmd) => {
+						const currentWords = input.split(' ');
+						currentWords[0] = cmd;
+						onInputChange({
+							target: { value: currentWords.join(' ') + ' ' },
+						});
+						setShowAutocomplete(false);
+					}}
+				/>
+			)}
 		</div>
 	);
 }

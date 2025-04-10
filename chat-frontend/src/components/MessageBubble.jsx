@@ -1,5 +1,6 @@
-// src/components/MessageBubble.jsx
 import { formatDistanceToNow } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function MessageBubble({
 	username,
@@ -26,7 +27,30 @@ export default function MessageBubble({
 						<span className="font-semibold" style={{ color }}>
 							{username}:
 						</span>{' '}
-						{text}
+						<ReactMarkdown
+							children={text}
+							remarkPlugins={[remarkGfm]}
+							components={{
+								a: (props) => (
+									<a
+										{...props}
+										className="text-blue-400 underline hover:text-blue-300"
+										target="_blank"
+										rel="noopener noreferrer"
+									/>
+								),
+								code: ({ inline, children }) =>
+									inline ? (
+										<code className="bg-zinc-700 px-1 rounded text-yellow-300">
+											{children}
+										</code>
+									) : (
+										<pre className="bg-zinc-800 p-2 rounded overflow-x-auto">
+											<code>{children}</code>
+										</pre>
+									),
+							}}
+						/>
 					</>
 				)}
 			</div>
