@@ -49,6 +49,11 @@ export default function MessageBubble({
 											<code>{children}</code>
 										</pre>
 									),
+								p({ children }) {
+									return (
+										<div className="mb-1">{children}</div>
+									);
+								},
 							}}
 						/>
 					</>
