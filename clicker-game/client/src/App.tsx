@@ -9,10 +9,25 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { motion } from 'framer-motion';
 
 type Message = {
 	type: 'system';
 	message: string;
+};
+
+type ClickEffect = {
+	id: number;
+	x: number;
+	y: number;
+	text: string;
+};
+
+type GameState = {
+	clickCount: number;
+	gold: number;
+	clickPower: number;
+	autoClickers: number;
 };
 
 function App() {
@@ -20,8 +35,15 @@ function App() {
 	const [username, setUsername] = useState('');
 	const [input, setInput] = useState('');
 	const [dialogOpen, setDialogOpen] = useState(true);
-	const [count, setCount] = useState(0);
 	const [messages, setMessages] = useState<Message[]>([]);
+	const [clickEffects, setClickEffects] = useState<ClickEffect[]>([]);
+
+	const [gameState, setGameState] = useState<GameState>({
+		clickCount: 0,
+		gold: 0,
+		clickPower: 1,
+		autoClickers: 0,
+	});
 
 	const messagesRef = useRef<HTMLDivElement | null>(null);
 
@@ -32,13 +54,13 @@ function App() {
 	}, [messages]);
 
 	useEffect(() => {
-		const socket = new WebSocket('ws://localhost:3001');
+		const socket = new WebSocket('ws://69.162.253.187:3001');
 		setWs(socket);
 
 		socket.onmessage = (event) => {
 			const data = JSON.parse(event.data);
 			if (data.type === 'init' || data.type === 'update') {
-				setCount(data.count);
+				setGameState(data.state);
 			} else if (data.type === 'system') {
 				setMessages((prev) => [
 					...prev,
@@ -56,9 +78,24 @@ function App() {
 		ws?.send(JSON.stringify({ type: 'register', username: input }));
 	};
 
-	const handleClick = () => {
+	const handleClick = (e: React.MouseEvent) => {
 		if (ws?.readyState === WebSocket.OPEN) {
 			ws.send(JSON.stringify({ type: 'click' }));
+
+			// animation
+			const rect = (e.target as HTMLElement).getBoundingClientRect();
+			const effect = {
+				id: Date.now(),
+				x: rect.left + rect.width / 2,
+				y: rect.top,
+				text: `+${gameState.clickPower}`,
+			};
+			setClickEffects((prev) => [...prev, effect]);
+			setTimeout(() => {
+				setClickEffects((prev) =>
+					prev.filter((fx) => fx.id !== effect.id)
+				);
+			}, 1000);
 		}
 	};
 
@@ -74,13 +111,68 @@ function App() {
 					<CardContent className="space-y-4">
 						<p className="text-lg">
 							Total Clicks:{' '}
-							<span className="font-bold">{count}</span>
+							<span className="font-bold">
+								{gameState.clickCount}
+							</span>
 						</p>
+						<p className="text-sm text-muted-foreground">
+							Gold: {gameState.gold} | Click Power:{' '}
+							{gameState.clickPower} | Auto-Clickers:{' '}
+							{gameState.autoClickers}
+						</p>
+
 						<Button
 							onClick={handleClick}
 							className="w-full text-lg py-6"
 						>
 							Click Me!
+						</Button>
+					</CardContent>
+				</Card>
+
+				{clickEffects.map((fx) => (
+					<motion.div
+						key={fx.id}
+						initial={{ opacity: 1, y: 0 }}
+						animate={{ opacity: 0, y: -40 }}
+						transition={{ duration: 1 }}
+						className="pointer-events-none fixed text-white text-xl font-bold select-none"
+						style={{ left: fx.x, top: fx.y }}
+					>
+						{fx.text}
+					</motion.div>
+				))}
+
+				<Card className="w-full max-w-md text-center">
+					<CardHeader>
+						<CardTitle className="text-3xl">Upgrades</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-2">
+						<Button
+							onClick={() =>
+								ws?.send(
+									JSON.stringify({
+										type: 'upgrade-click-power',
+									})
+								)
+							}
+							disabled={gameState.gold < 50}
+							className="w-full"
+						>
+							Upgrade Click Power (+1) – 50 Gold
+						</Button>
+						<Button
+							onClick={() =>
+								ws?.send(
+									JSON.stringify({
+										type: 'upgrade-auto-clicker',
+									})
+								)
+							}
+							disabled={gameState.gold < 100}
+							className="w-full"
+						>
+							Buy Auto Clicker (+1) – 100 Gold
 						</Button>
 					</CardContent>
 				</Card>
