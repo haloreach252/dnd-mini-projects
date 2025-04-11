@@ -55,6 +55,12 @@ wss.on('connection', (ws) => {
 				state.gold += state.clickPower;
 				saveState();
 				broadcast({ type: 'update', state });
+				broadcast({
+					type: 'action',
+					message: `${clients.get(ws) || 'Someone'} clicked (+${
+						state.clickPower
+					})`,
+				});
 				break;
 
 			case 'upgrade-click-power':
@@ -63,6 +69,12 @@ wss.on('connection', (ws) => {
 					state.clickPower += 1;
 					saveState();
 					broadcast({ type: 'update', state });
+					broadcast({
+						type: 'action',
+						message: `${
+							clients.get(ws) || 'Someone'
+						} upgraded Click Power (+1)`,
+					});
 				}
 				break;
 
@@ -72,6 +84,12 @@ wss.on('connection', (ws) => {
 					state.autoClickers += 1;
 					saveState();
 					broadcast({ type: 'update', state });
+					broadcast({
+						type: 'action',
+						message: `${
+							clients.get(ws) || 'Someone'
+						} bought an Auto Clicker (+1)`,
+					});
 				}
 				break;
 		}
@@ -96,6 +114,12 @@ setInterval(() => {
 		state.gold += state.autoClickers * state.clickPower;
 		saveState();
 		broadcast({ type: 'update', state });
+		broadcast({
+			type: 'action',
+			message: `Auto clickers clicked (+${
+				state.autoClickers * state.clickPower
+			})`,
+		});
 	}
 }, 1000);
 

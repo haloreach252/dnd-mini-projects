@@ -16,6 +16,11 @@ type Message = {
 	message: string;
 };
 
+type ActionMessage = {
+	type: 'action';
+	message: string;
+};
+
 type ClickEffect = {
 	id: number;
 	x: number;
@@ -37,6 +42,8 @@ function App() {
 	const [dialogOpen, setDialogOpen] = useState(true);
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [clickEffects, setClickEffects] = useState<ClickEffect[]>([]);
+	const [actionLog, setActionLog] = useState<ActionMessage[]>([]);
+	const actionRef = useRef<HTMLDivElement | null>(null);
 
 	const [gameState, setGameState] = useState<GameState>({
 		clickCount: 0,
@@ -66,11 +73,19 @@ function App() {
 					...prev,
 					{ type: 'system', message: data.message },
 				]);
+			} else if (data.type === 'action') {
+				setActionLog((prev) => [...prev.slice(-49), data]); // cap at 50 entries
 			}
 		};
 
 		return () => socket.close();
 	}, []);
+
+	useEffect(() => {
+		if (actionRef.current) {
+			actionRef.current.scrollTop = actionRef.current.scrollHeight;
+		}
+	}, [actionLog]);
 
 	const registerUsername = () => {
 		setUsername(input);
@@ -100,8 +115,8 @@ function App() {
 	};
 
 	return (
-		<>
-			<main className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 gap-6">
+		<div className="flex">
+			<main className="min-h-screen flex flex-col items-center justify-center p-4 gap-6 flex-1">
 				<Card className="w-full max-w-md text-center">
 					<CardHeader>
 						<CardTitle className="text-3xl">
@@ -189,6 +204,19 @@ function App() {
 				</div>
 			</main>
 
+			{/* Sidebar */}
+			<div
+				ref={actionRef}
+				className="fixed right-0 top-0 h-screen w-72 bg-muted/20 border-l border-border p-4 overflow-y-auto text-sm space-y-2"
+			>
+				<h2 className="font-bold text-lg mb-2">📜 Game Log</h2>
+				{actionLog.map((entry, i) => (
+					<p key={i} className="text-muted-foreground">
+						{entry.message}
+					</p>
+				))}
+			</div>
+
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
@@ -213,7 +241,7 @@ function App() {
 					</div>
 				</DialogContent>
 			</Dialog>
-		</>
+		</div>
 	);
 }
 
