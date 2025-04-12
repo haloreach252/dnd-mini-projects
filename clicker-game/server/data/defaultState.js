@@ -15,6 +15,8 @@ const defaultState = {
 	goldMultiplier: 1,
 	clickMultiplier: 1,
 	megaClickerInterval: 1000,
+	criticalChance: 0.05,
+	criticalMultiplier: 2.0,
 };
 
 module.exports = {

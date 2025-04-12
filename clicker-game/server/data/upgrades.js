@@ -86,6 +86,33 @@ const upgradeRegistry = {
 			state.clickMultiplier += 4;
 		},
 	},
+	precisionTapping: {
+		id: 'precisionTapping',
+		name: 'Precision Tapping',
+		description: 'Increases critical click chance by 1%',
+		baseCost: 750,
+		costMultiplier: 1.5,
+		visibleIf: () => true,
+		purchasableIf: () => true,
+		effect: (state) => {
+			state.criticalChance = Math.min(
+				(state.criticalChance || 0) + 0.01,
+				0.5 // Max 50% crit chance
+			);
+		},
+	},
+	goldenTouch: {
+		id: 'goldenTouch',
+		name: 'Golden Touch',
+		description: 'Increases critical click multiplier by 0.5x',
+		baseCost: 1000,
+		costMultiplier: 1.6,
+		visibleIf: () => true,
+		purchasableIf: () => true,
+		effect: (state) => {
+			state.criticalMultiplier = (state.criticalMultiplier || 2) + 0.5;
+		},
+	},
 };
 
 function getVisibleUpgrades(state) {

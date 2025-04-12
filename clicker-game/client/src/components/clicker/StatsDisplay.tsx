@@ -1,4 +1,3 @@
-import React from 'react';
 import NumberDisplay from './NumberDisplay';
 import { GameState } from '@/App';
 
@@ -8,7 +7,7 @@ interface StatsDisplayProps {
 
 export default function StatsDisplay({ state }: StatsDisplayProps) {
 	return (
-		<div className="grid grid-cols-2 gap-2 w-full">
+		<div className="grid grid-cols-3 gap-2 w-full">
 			<div className="bg-slate-800 rounded-md p-2 text-center border border-slate-700">
 				<div className="text-xs text-slate-400">Total Clicks</div>
 				<div className="font-bold text-lg text-slate-200">
@@ -44,6 +43,26 @@ export default function StatsDisplay({ state }: StatsDisplayProps) {
 					/>
 				</div>
 			</div>
+
+			{state.criticalChance !== undefined && (
+				<div className="bg-slate-800 rounded-md p-2 text-center border border-slate-700">
+					<div className="text-xs text-slate-400">Crit Chance</div>
+					<div className="font-bold text-lg text-fuchsia-400">
+						{(state.criticalChance * 100).toFixed(1)}%
+					</div>
+				</div>
+			)}
+
+			{state.criticalMultiplier !== undefined && (
+				<div className="bg-slate-800 rounded-md p-2 text-center border border-slate-700">
+					<div className="text-xs text-slate-400">
+						Crit Multiplier
+					</div>
+					<div className="font-bold text-lg text-yellow-300">
+						×{state.criticalMultiplier.toFixed(1)}
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

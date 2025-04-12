@@ -201,9 +201,19 @@ wss.on('connection', (ws) => {
 					break;
 
 				case 'click': {
+					const username = clients.get(ws) || 'Someone';
+
 					state.clickCount += state.clickMultiplier;
-					// Apply gold multiplier
-					state.gold += getClickPower() * state.goldMultiplier;
+
+					// Critical click logic
+					const isCritical =
+						Math.random() < (state.criticalChance || 0);
+					const baseGold = getClickPower() * state.goldMultiplier;
+					const goldEarned = isCritical
+						? baseGold * (state.criticalMultiplier || 2)
+						: baseGold;
+
+					state.gold += goldEarned;
 
 					// Check for new milestones
 					const newMilestones = checkMilestones(state);
@@ -212,12 +222,24 @@ wss.on('connection', (ws) => {
 					broadcast({ type: 'update', state: getStateWithCosts() });
 
 					// Broadcast click action
+					const goldMessage = `(+${Math.floor(goldEarned)})`;
+					const message = isCritical
+						? `${username} landed a CRITICAL CLICK! ${goldMessage}`
+						: `${username} clicked ${goldMessage}`;
+
 					broadcast({
 						type: 'action',
-						message: `${clients.get(ws) || 'Someone'} clicked (+${
-							getClickPower() * state.goldMultiplier
-						})`,
+						message: message,
 					});
+
+					// 🎯 Send direct click result back to the clicking client
+					ws.send(
+						JSON.stringify({
+							type: 'click-result',
+							isCritical,
+							goldEarned,
+						})
+					);
 
 					// If new milestones were completed, broadcast them
 					if (newMilestones.length > 0) {
@@ -225,7 +247,7 @@ wss.on('connection', (ws) => {
 							broadcast({
 								type: 'milestone-achieved',
 								milestone,
-								username: clients.get(ws) || 'Someone',
+								username,
 							});
 						}
 					}

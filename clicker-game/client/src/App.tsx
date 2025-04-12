@@ -7,7 +7,7 @@ import UpgradeSection from './components/clicker/UpgradeSection';
 import AuthDialog from './components/clicker/AuthDialog';
 import { useAuth } from './hooks/useAuth';
 import { useWebSocket } from './hooks/useWebSocket';
-import MilestoneSection from './components/clicker/MilestoneSection';
+//import MilestoneSection from './components/clicker/MilestoneSection';
 import StatsDisplay from './components/clicker/StatsDisplay';
 import ClickEffect from './components/clicker/ClickEffect';
 
@@ -37,6 +37,8 @@ export type GameState = {
 		completed: boolean;
 	}[];
 	goldMultiplier?: number;
+	criticalChance?: number;
+	criticalMultiplier?: number;
 };
 
 const defaultGameState: GameState = {
@@ -64,7 +66,8 @@ type ClickEffect = {
 	id: number;
 	x: number;
 	y: number;
-	text: string;
+	value: number;
+	isCritical?: boolean;
 };
 
 export default function App() {
@@ -114,12 +117,35 @@ export default function App() {
 				setMessages((prev) => [...prev, data]);
 				break;
 			case 'action':
-				setActionLog((prev) => [...prev, data]);
+				setActionLog((prev) => {
+					const newLog = [...prev, data];
+					if (newLog.length > 100) {
+						newLog.splice(0, newLog.length - 100); // Keep only the last 100 messages
+					}
+					return newLog;
+				});
+
 				break;
-			default:
-				// Handle auth-related messages
-				handleAuthMessage(data);
+			case 'click-result': {
+				const goldEarned = Number(data.goldEarned) || 0;
+
+				const effect = {
+					id: Date.now(),
+					x: lastClickRef.current?.x || 0,
+					y: lastClickRef.current?.y || 0,
+					value: goldEarned,
+					isCritical: data.isCritical,
+				};
+
+				setClickEffects((prev) => [...prev, effect]);
+
+				setTimeout(() => {
+					setClickEffects((prev) =>
+						prev.filter((fx) => fx.id !== effect.id)
+					);
+				}, 1000);
 				break;
+			}
 			case 'milestone-achieved':
 				// Add a special animation or notification when milestone is achieved
 				setMessages((prev) => [
@@ -129,6 +155,10 @@ export default function App() {
 						message: `🏆 ${data.username} achieved milestone: ${data.milestone.name}! Reward: ${data.milestone.reward}`,
 					},
 				]);
+				break;
+			default:
+				// Handle auth-related messages
+				handleAuthMessage(data);
 				break;
 		}
 
@@ -146,28 +176,13 @@ export default function App() {
 			actionRef.current.scrollTop = actionRef.current.scrollHeight;
 		}
 	}, [actionLog]);
+
+	const lastClickRef = useRef<{ x: number; y: number } | null>(null);
+
 	const handleClick = (e: React.MouseEvent) => {
 		if (ws?.readyState === WebSocket.OPEN) {
 			ws.send(JSON.stringify({ type: 'click' }));
-
-			const effect = {
-				id: Date.now(),
-				x: e.clientX,
-				y: e.clientY,
-				text: `+${gameState.clickPower}`,
-			};
-
-			setClickEffects((prev) => {
-				const newEffects = [...prev, effect];
-				return newEffects;
-			});
-
-			setTimeout(() => {
-				setClickEffects((prev) => {
-					const newEffects = prev.filter((fx) => fx.id !== effect.id);
-					return newEffects;
-				});
-			}, 1000);
+			lastClickRef.current = { x: e.clientX, y: e.clientY };
 		} else {
 			console.warn('WebSocket not connected');
 		}
@@ -189,13 +204,13 @@ export default function App() {
 			{/* Main Game Area */}
 			<main className="flex-1 flex flex-col overflow-hidden bg-slate-950">
 				<div className="flex-1 flex flex-col items-center justify-center p-4">
-					<Card className="w-full max-w-md text-center border-slate-700 bg-slate-900 shadow-lg">
+					<Card className="w-full max-w-3xl text-center border-slate-700 bg-slate-900 shadow-lg">
 						<CardHeader className="py-3">
 							<CardTitle className="text-2xl text-slate-100">
-								🖱️ Real-Time Clicker
+								Miniverse Clicker <br />
 								{username && (
 									<span className="text-blue-400 ml-2">
-										{username}
+										Welcome {username}
 									</span>
 								)}
 							</CardTitle>
@@ -243,7 +258,8 @@ export default function App() {
 						id={fx.id}
 						x={fx.x}
 						y={fx.y}
-						value={gameState.clickPower}
+						value={fx.value}
+						isCritical={fx.isCritical}
 					/>
 				))}
 
