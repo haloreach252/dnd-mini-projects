@@ -10,6 +10,7 @@ const { getCheats, useCheat } = require('./data/cheats');
 const { checkMilestones, getAllMilestones } = require('./data/milestones');
 const { defaultState } = require('./data/defaultState');
 const db = require('./db/db');
+const { checkStoryTriggers } = require('./data/storyTriggers');
 
 // Set contants
 const shouldReset = false;
@@ -265,6 +266,18 @@ wss.on('connection', (ws) => {
 						type: 'action',
 						message: message,
 					});
+
+					const newStoryMessages = checkStoryTriggers(state);
+
+					for (const story of newStoryMessages) {
+						ws.send(
+							JSON.stringify({
+								type: 'story-message',
+								id: story.id,
+								text: story.text,
+							})
+						);
+					}
 
 					// 🎯 Send direct click result back to the clicking client
 					ws.send(

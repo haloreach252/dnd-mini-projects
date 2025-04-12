@@ -70,6 +70,14 @@ type ClickEffect = {
 	isCritical?: boolean;
 };
 
+function getComboBarColor(multiplier: number): string {
+	if (multiplier >= 2) return 'bg-red-600';
+	if (multiplier >= 1.5) return 'bg-yellow-400';
+	if (multiplier >= 1.25) return 'bg-green-500';
+	if (multiplier >= 1.1) return 'bg-blue-500';
+	return 'bg-slate-500';
+}
+
 export default function App() {
 	const [gameState, setGameState] = useState<GameState>(defaultGameState);
 	const [messages, setMessages] = useState<Message[]>([]);
@@ -81,9 +89,27 @@ export default function App() {
 	>('connecting');
 	const [comboCount, setComboCount] = useState(0);
 	const [comboMultiplier, setComboMultiplier] = useState(1);
-	const comboTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const messagesRef = useRef<HTMLDivElement | null>(null);
 	const actionRef = useRef<HTMLDivElement | null>(null);
+
+	const comboIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+	useEffect(() => {
+		// Start decaying comboCount
+		comboIntervalRef.current = setInterval(() => {
+			setComboCount((prev) => {
+				if (prev > 0) {
+					return prev - 1; // Decrease by 1 every interval
+				}
+				return 0;
+			});
+		}, 200); // Decays by 1 every 200ms (5 per second)
+
+		return () => {
+			if (comboIntervalRef.current)
+				clearInterval(comboIntervalRef.current);
+		};
+	}, []);
 
 	const {
 		isLoggedIn,
@@ -160,6 +186,13 @@ export default function App() {
 					},
 				]);
 				break;
+			case 'story-message': {
+				setMessages((prev) => [
+					...prev,
+					{ type: 'system', message: `📜 ${data.text}` },
+				]);
+				break;
+			}
 			default:
 				// Handle auth-related messages
 				handleAuthMessage(data);
@@ -198,13 +231,6 @@ export default function App() {
 				const newCount = prev + 1;
 				return newCount;
 			});
-
-			// Reset combo timeout
-			if (comboTimeoutRef.current) clearTimeout(comboTimeoutRef.current);
-			comboTimeoutRef.current = setTimeout(() => {
-				setComboCount(0);
-				setComboMultiplier(1);
-			}, 2000);
 		} else {
 			console.warn('WebSocket not connected');
 		}
@@ -259,7 +285,9 @@ export default function App() {
 								</div>
 								<div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-fuchsia-700 shadow-inner relative">
 									<div
-										className="h-full bg-fuchsia-500 transition-all duration-200"
+										className={`h-full transition-all duration-200 ${getComboBarColor(
+											comboMultiplier
+										)}`}
 										style={{
 											width: `${Math.min(
 												comboCount,
@@ -278,6 +306,22 @@ export default function App() {
 											}}
 										></div>
 									))}
+
+									{[20, 40, 70, 100].map(
+										(threshold, index) => (
+											<div
+												key={`label-${threshold}`}
+												className="absolute -top-4 text-[10px] text-fuchsia-400"
+												style={{
+													left: `${threshold}%`,
+													transform:
+														'translateX(-50%)',
+												}}
+											>
+												x{[1.1, 1.25, 1.5, 2][index]}
+											</div>
+										)
+									)}
 								</div>
 							</div>
 
