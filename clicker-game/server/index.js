@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt');
 // Our stuff
 const { getVisibleUpgrades, purchaseUpgrade } = require('./data/upgrades');
 const { getCheats, useCheat } = require('./data/cheats');
+const { checkMilestones, getAllMilestones } = require('./data/milestones');
 const { defaultState } = require('./data/defaultState');
 const db = require('./db/db');
 
@@ -54,6 +55,7 @@ function getStateWithCosts() {
 		...state,
 		upgrades: getVisibleUpgrades(state),
 		cheats: getCheats(),
+		milestones: getAllMilestones(state),
 	};
 }
 
@@ -194,18 +196,37 @@ wss.on('connection', (ws) => {
 					});
 					break;
 
-				case 'click':
+				case 'click': {
 					state.clickCount++;
-					state.gold += state.clickPower;
-					//saveState();
+					// Apply gold multiplier
+					state.gold += state.clickPower * state.goldMultiplier;
+
+					// Check for new milestones
+					const newMilestones = checkMilestones(state);
+
+					// Broadcast state update
 					broadcast({ type: 'update', state: getStateWithCosts() });
+
+					// Broadcast click action
 					broadcast({
 						type: 'action',
 						message: `${clients.get(ws) || 'Someone'} clicked (+${
-							state.clickPower
+							state.clickPower * state.goldMultiplier
 						})`,
 					});
+
+					// If new milestones were completed, broadcast them
+					if (newMilestones.length > 0) {
+						for (const milestone of newMilestones) {
+							broadcast({
+								type: 'milestone-achieved',
+								milestone,
+								username: clients.get(ws) || 'Someone',
+							});
+						}
+					}
 					break;
+				}
 
 				case 'purchase-upgrade': {
 					const upgradeName = purchaseUpgrade(

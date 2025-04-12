@@ -8,6 +8,9 @@ const defaultState = {
 	upgradeLevels: {}, // { clickPower: 1, autoClicker: 3, ... }
 	autoClickerInterval: 1000,
 	cheatsUsed: false,
+	completedMilestones: [],
+	goldEarned: 0,
+	goldMultiplier: 1,
 };
 
 module.exports = {

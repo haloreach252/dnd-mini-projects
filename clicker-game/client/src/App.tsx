@@ -1,33 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
+
 import CheatSection from './components/clicker/CheatSection';
 import UpgradeSection from './components/clicker/UpgradeSection';
-
-type Message = {
-	type: 'system';
-	message: string;
-};
-
-type ActionMessage = {
-	type: 'action';
-	message: string;
-};
-
-type ClickEffect = {
-	id: number;
-	x: number;
-	y: number;
-	text: string;
-};
+import AuthDialog from './components/clicker/AuthDialog';
+import { useAuth } from './hooks/useAuth';
+import { useWebSocket } from './hooks/useWebSocket';
+import MilestoneSection from './components/clicker/MilestoneSection';
 
 export type GameState = {
 	clickCount: number;
@@ -47,6 +28,14 @@ export type GameState = {
 		name: string;
 		description: string;
 	}[];
+	milestones?: {
+		id: string;
+		name: string;
+		description: string;
+		icon: string;
+		completed: boolean;
+	}[];
+	goldMultiplier?: number;
 };
 
 const defaultGameState: GameState = {
@@ -56,82 +45,100 @@ const defaultGameState: GameState = {
 	autoClickers: 0,
 	upgrades: [],
 	cheats: [],
+	milestones: [],
+	goldMultiplier: 1,
 };
 
-function App() {
-	const [isLoggedIn, setIsLoggedIn] = useState(false);
-	const [mode, setMode] = useState<'login' | 'register'>('login');
-	const [password, setPassword] = useState('');
-	const [authError, setAuthError] = useState('');
+type Message = {
+	type: 'system';
+	message: string;
+};
 
-	const [ws, setWs] = useState<WebSocket | null>(null);
-	const [username, setUsername] = useState('');
-	const [input, setInput] = useState('');
-	const [dialogOpen, setDialogOpen] = useState(true);
+type ActionMessage = {
+	type: 'action';
+	message: string;
+};
+
+type ClickEffect = {
+	id: number;
+	x: number;
+	y: number;
+	text: string;
+};
+
+export default function App() {
+	const [gameState, setGameState] = useState<GameState>(defaultGameState);
 	const [messages, setMessages] = useState<Message[]>([]);
-	const [clickEffects, setClickEffects] = useState<ClickEffect[]>([]);
 	const [actionLog, setActionLog] = useState<ActionMessage[]>([]);
+	const [clickEffects, setClickEffects] = useState<ClickEffect[]>([]);
+	const [ws, setWs] = useState<WebSocket | null>(null);
+	const [connectionStatus, setConnectionStatus] = useState<
+		'connecting' | 'connected' | 'disconnected'
+	>('connecting');
+	const messagesRef = useRef<HTMLDivElement | null>(null);
 	const actionRef = useRef<HTMLDivElement | null>(null);
 
-	const [gameState, setGameState] = useState<GameState>(defaultGameState);
+	const {
+		isLoggedIn,
+		username,
+		mode,
+		setMode,
+		input,
+		setInput,
+		password,
+		setPassword,
+		authError,
+		submit,
+		handleMessage: handleAuthMessage,
+		logout,
+	} = useAuth(ws);
 
-	const messagesRef = useRef<HTMLDivElement | null>(null);
+	useWebSocket((data, socketInstance) => {
+		if (socketInstance.readyState === WebSocket.OPEN) {
+			setConnectionStatus('connected');
+		} else {
+			setConnectionStatus('disconnected');
+		}
+
+		// Handle different message types
+		switch (data.type) {
+			case 'init':
+				console.log('Received initial state:', data.state);
+				setGameState(data.state);
+				break;
+			case 'update':
+				setGameState(data.state);
+				break;
+			case 'system':
+				setMessages((prev) => [...prev, data]);
+				break;
+			case 'action':
+				setActionLog((prev) => [...prev, data]);
+				break;
+			default:
+				// Handle auth-related messages
+				handleAuthMessage(data);
+				break;
+			case 'milestone-achieved':
+				// Add a special animation or notification when milestone is achieved
+				setMessages((prev) => [
+					...prev,
+					{
+						type: 'system',
+						message: `🏆 ${data.username} achieved milestone: ${data.milestone.name}! Reward: ${data.milestone.reward}`,
+					},
+				]);
+				break;
+		}
+
+		setWs(socketInstance);
+	});
 
 	useEffect(() => {
 		if (messagesRef.current) {
 			messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
 		}
 	}, [messages]);
-
-	useEffect(() => {
-		const socket = new WebSocket('ws://69.162.253.187:3001');
-		setWs(socket);
-
-		socket.onopen = () => {
-			const saved = localStorage.getItem('clicker-session');
-			if (saved) {
-				socket.send(
-					JSON.stringify({ type: 'resume-session', token: saved })
-				);
-			}
-		};
-
-		socket.onmessage = (event) => {
-			const data = JSON.parse(event.data);
-			if (data.type === 'login-success') {
-				localStorage.setItem('clicker-session', data.token);
-				setUsername(data.username);
-				setIsLoggedIn(true);
-				setDialogOpen(false);
-				setAuthError('');
-			}
-
-			if (data.type === 'register-success') {
-				setMode('login');
-				setAuthError('Account created. You can now log in.');
-			}
-
-			if (
-				data.type === 'login-failure' ||
-				data.type === 'register-failure'
-			) {
-				setAuthError(data.reason || 'An error occurred');
-			}
-
-			if (data.type === 'init' || data.type === 'update') {
-				setGameState(data.state);
-			} else if (data.type === 'system') {
-				setMessages((prev) => [
-					...prev,
-					{ type: 'system', message: data.message },
-				]);
-			} else if (data.type === 'action') {
-				setActionLog((prev) => [...prev.slice(-49), data]); // cap at 50 entries
-			}
-		};
-
-		return () => socket.close();
-	}, []);
 
 	useEffect(() => {
 		if (actionRef.current) {
@@ -143,12 +150,11 @@ function App() {
 		if (ws?.readyState === WebSocket.OPEN) {
 			ws.send(JSON.stringify({ type: 'click' }));
 
-			// animation
 			const rect = (e.target as HTMLElement).getBoundingClientRect();
 			const effect = {
 				id: Date.now(),
-				x: rect.left + rect.width / 2,
-				y: rect.top,
+				x: e.clientX,
+				y: e.clientY,
 				text: `+${gameState.clickPower}`,
 			};
 			setClickEffects((prev) => [...prev, effect]);
@@ -157,6 +163,8 @@ function App() {
 					prev.filter((fx) => fx.id !== effect.id)
 				);
 			}, 1000);
+		} else {
+			console.warn('WebSocket not connected');
 		}
 	};
 
@@ -167,8 +175,21 @@ function App() {
 					<CardHeader>
 						<CardTitle className="text-3xl">
 							🖱️ Real-Time Clicker <br />
-							{username}
+							{username && <span>{username}</span>}
 						</CardTitle>
+						<div
+							className={`text-sm ${
+								connectionStatus === 'connected'
+									? 'text-green-500'
+									: 'text-red-500'
+							}`}
+						>
+							{connectionStatus === 'connected'
+								? 'Connected'
+								: connectionStatus === 'connecting'
+								? 'Connecting...'
+								: 'Disconnected'}
+						</div>
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<p className="text-lg">
@@ -182,10 +203,12 @@ function App() {
 							{gameState.clickPower} | Auto-Clickers:{' '}
 							{gameState.autoClickers}
 						</p>
-
 						<Button
 							onClick={handleClick}
 							className="w-full text-lg py-6"
+							disabled={
+								connectionStatus !== 'connected' || !isLoggedIn
+							}
 						>
 							Click Me!
 						</Button>
@@ -206,7 +229,7 @@ function App() {
 				))}
 
 				<UpgradeSection state={gameState} ws={ws} />
-
+				<MilestoneSection state={gameState} />
 				<CheatSection state={gameState} ws={ws} />
 
 				<div
@@ -221,7 +244,6 @@ function App() {
 				</div>
 			</main>
 
-			{/* Sidebar */}
 			<div
 				ref={actionRef}
 				className="fixed right-0 top-0 h-screen w-72 bg-muted/20 border-l border-border p-4 overflow-y-auto text-sm space-y-2"
@@ -234,80 +256,28 @@ function App() {
 				))}
 			</div>
 
-			<Button
-				variant="outline"
-				size="sm"
-				onClick={() => {
-					localStorage.removeItem('clicker-session');
-					setIsLoggedIn(false);
-					setPassword('');
-					setInput('');
-				}}
-			>
-				Logout
-			</Button>
+			{isLoggedIn && (
+				<Button
+					className="fixed bottom-4 left-4"
+					variant="outline"
+					size="sm"
+					onClick={logout}
+				>
+					Logout
+				</Button>
+			)}
 
-			<Dialog open={!isLoggedIn} onOpenChange={setDialogOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>
-							{mode === 'login' ? 'Login' : 'Register'}
-						</DialogTitle>
-					</DialogHeader>
-					<div className="flex flex-col gap-4">
-						<Input
-							placeholder="Username"
-							value={input}
-							onChange={(e) => setInput(e.target.value)}
-						/>
-						<Input
-							type="password"
-							placeholder="Password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-						/>
-
-						{authError && (
-							<p className="text-sm text-red-500 text-center">
-								{authError}
-							</p>
-						)}
-
-						<Button
-							onClick={() => {
-								ws?.send(
-									JSON.stringify({
-										type:
-											mode === 'login'
-												? 'login-user'
-												: 'register-user',
-										username: input,
-										password,
-									})
-								);
-							}}
-							disabled={!input.trim() || !password.trim()}
-						>
-							{mode === 'login' ? 'Login' : 'Register'}
-						</Button>
-
-						<button
-							onClick={() =>
-								setMode((prev) =>
-									prev === 'login' ? 'register' : 'login'
-								)
-							}
-							className="text-xs text-muted-foreground hover:underline"
-						>
-							{mode === 'login'
-								? "Don't have an account? Register"
-								: 'Already have an account? Login'}
-						</button>
-					</div>
-				</DialogContent>
-			</Dialog>
+			<AuthDialog
+				isOpen={!isLoggedIn}
+				mode={mode}
+				setMode={setMode}
+				input={input}
+				setInput={setInput}
+				password={password}
+				setPassword={setPassword}
+				authError={authError}
+				submit={submit}
+			/>
 		</div>
 	);
 }
-
-export default App;

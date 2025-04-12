@@ -1,11 +1,25 @@
 {
-  "clickCount": 59,
-  "gold": 59,
-  "clickPower": 1,
-  "autoClickers": 0,
+  "clickCount": 32625,
+  "gold": 915031.625,
+  "clickPower": 33,
+  "autoClickers": 15,
   "clickPowerLevel": 0,
   "autoClickerLevel": 0,
-  "upgradeLevels": {},
-  "autoClickerInterval": 1000,
-  "cheatsUsed": true
+  "upgradeLevels": {
+    "clickPower": 18,
+    "autoClicker": 15,
+    "autoClickerSpeed": 7
+  },
+  "autoClickerInterval": 270,
+  "cheatsUsed": true,
+  "completedMilestones": [
+    "clicks100",
+    "clicks1000",
+    "clicks10000",
+    "gold500",
+    "gold5000",
+    "upgrades5"
+  ],
+  "goldEarned": 855631.625,
+  "goldMultiplier": 1.375
 }
