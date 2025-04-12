@@ -87,9 +87,19 @@ function App() {
 		const socket = new WebSocket('ws://69.162.253.187:3001');
 		setWs(socket);
 
+		socket.onopen = () => {
+			const saved = localStorage.getItem('clicker-session');
+			if (saved) {
+				socket.send(
+					JSON.stringify({ type: 'resume-session', token: saved })
+				);
+			}
+		};
+
 		socket.onmessage = (event) => {
 			const data = JSON.parse(event.data);
 			if (data.type === 'login-success') {
+				localStorage.setItem('clicker-session', data.token);
 				setUsername(data.username);
 				setIsLoggedIn(true);
 				setDialogOpen(false);
@@ -223,6 +233,19 @@ function App() {
 					</p>
 				))}
 			</div>
+
+			<Button
+				variant="outline"
+				size="sm"
+				onClick={() => {
+					localStorage.removeItem('clicker-session');
+					setIsLoggedIn(false);
+					setPassword('');
+					setInput('');
+				}}
+			>
+				Logout
+			</Button>
 
 			<Dialog open={!isLoggedIn} onOpenChange={setDialogOpen}>
 				<DialogContent>

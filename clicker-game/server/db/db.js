@@ -14,4 +14,15 @@ db.prepare(
 `
 ).run();
 
+db.prepare(
+	`
+    CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        userId INTEGER NOT NULL,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(userId) REFERENCES users(id)
+    )
+    `
+).run();
+
 module.exports = db;

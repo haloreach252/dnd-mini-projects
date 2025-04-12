@@ -128,14 +128,61 @@ wss.on('connection', (ws) => {
 						break;
 					}
 
-					clients.set(ws, username); // associate socket with username
+					const sessionId = crypto.randomUUID();
+					db.prepare(
+						`INSERT INTO sessions (id, userId) VALUES (?, ?)`
+					).run(sessionId, row.id);
+
+					clients.set(ws, username);
 					ws.send(
-						JSON.stringify({ type: 'login-success', username })
+						JSON.stringify({
+							type: 'login-success',
+							username,
+							token: sessionId,
+						})
 					);
 					broadcast({
 						type: 'system',
 						message: `${username} logged in.`,
 					});
+					break;
+				}
+
+				case 'resume-session': {
+					const { token } = data;
+					if (!token) return;
+
+					const session = db
+						.prepare(
+							`
+		SELECT users.username FROM sessions
+		JOIN users ON users.id = sessions.userId
+		WHERE sessions.id = ?
+	`
+						)
+						.get(token);
+
+					if (session) {
+						clients.set(ws, session.username);
+						ws.send(
+							JSON.stringify({
+								type: 'login-success',
+								username: session.username,
+								token,
+							})
+						);
+						broadcast({
+							type: 'system',
+							message: `${session.username} reconnected.`,
+						});
+					} else {
+						ws.send(
+							JSON.stringify({
+								type: 'login-failure',
+								reason: 'Invalid session token',
+							})
+						);
+					}
 					break;
 				}
 
