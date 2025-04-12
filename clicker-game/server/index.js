@@ -21,6 +21,22 @@ const wss = new WebSocket.Server({ port: 3001 });
 // Get our data
 const DATA_PATH = path.join(__dirname, 'data.json');
 
+// Fill this method if a DB update is needed
+function runUpdate() {
+	const columnExists = db
+		.prepare(`PRAGMA table_info(users)`)
+		.all()
+		.some((column) => column.name === 'lastStoryMessage');
+
+	if (!columnExists) {
+		db.prepare(
+			`
+    ALTER TABLE users ADD COLUMN lastStoryMessage TEXT DEFAULT ''
+    `
+		).run();
+	}
+}
+
 function loadState() {
 	if (shouldReset) {
 		return defaultState;
@@ -205,10 +221,28 @@ wss.on('connection', (ws) => {
 
 					state.clickCount += state.clickMultiplier;
 
+					const comboCount =
+						typeof data.comboCount === 'number'
+							? data.comboCount
+							: 0;
+
+					function getComboMultiplier(count) {
+						if (count >= 100) return 2;
+						if (count >= 70) return 1.5;
+						if (count >= 40) return 1.25;
+						if (count >= 20) return 1.1;
+						return 1;
+					}
+
+					const comboMultiplier = getComboMultiplier(comboCount);
+
 					// Critical click logic
 					const isCritical =
 						Math.random() < (state.criticalChance || 0);
-					const baseGold = getClickPower() * state.goldMultiplier;
+					const baseGold =
+						getClickPower() *
+						state.goldMultiplier *
+						comboMultiplier;
 					const goldEarned = isCritical
 						? baseGold * (state.criticalMultiplier || 2)
 						: baseGold;
@@ -238,6 +272,7 @@ wss.on('connection', (ws) => {
 							type: 'click-result',
 							isCritical,
 							goldEarned,
+							comboMultiplier,
 						})
 					);
 
@@ -351,5 +386,8 @@ function startAutoClickers() {
 }
 
 startAutoClickers();
+
+// Run any needed DB Updates
+runUpdate();
 
 console.log('WebSocket server running on ws://localhost:3001');

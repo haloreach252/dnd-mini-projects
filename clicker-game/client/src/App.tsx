@@ -79,6 +79,9 @@ export default function App() {
 	const [connectionStatus, setConnectionStatus] = useState<
 		'connecting' | 'connected' | 'disconnected'
 	>('connecting');
+	const [comboCount, setComboCount] = useState(0);
+	const [comboMultiplier, setComboMultiplier] = useState(1);
+	const comboTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const messagesRef = useRef<HTMLDivElement | null>(null);
 	const actionRef = useRef<HTMLDivElement | null>(null);
 
@@ -137,6 +140,7 @@ export default function App() {
 					isCritical: data.isCritical,
 				};
 
+				setComboMultiplier(Number(data.comboMultiplier) || 1);
 				setClickEffects((prev) => [...prev, effect]);
 
 				setTimeout(() => {
@@ -181,8 +185,26 @@ export default function App() {
 
 	const handleClick = (e: React.MouseEvent) => {
 		if (ws?.readyState === WebSocket.OPEN) {
-			ws.send(JSON.stringify({ type: 'click' }));
+			ws.send(
+				JSON.stringify({
+					type: 'click',
+					comboCount,
+				})
+			);
 			lastClickRef.current = { x: e.clientX, y: e.clientY };
+
+			// Update combo
+			setComboCount((prev) => {
+				const newCount = prev + 1;
+				return newCount;
+			});
+
+			// Reset combo timeout
+			if (comboTimeoutRef.current) clearTimeout(comboTimeoutRef.current);
+			comboTimeoutRef.current = setTimeout(() => {
+				setComboCount(0);
+				setComboMultiplier(1);
+			}, 2000);
 		} else {
 			console.warn('WebSocket not connected');
 		}
@@ -230,6 +252,34 @@ export default function App() {
 						</CardHeader>
 						<CardContent className="space-y-4 py-3">
 							<StatsDisplay state={gameState} />
+
+							<div className="w-full max-w-md mx-auto mb-2 relative">
+								<div className="text-center text-xs text-fuchsia-300 font-bold mb-1">
+									🔥 Combo x{comboMultiplier.toFixed(2)}
+								</div>
+								<div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-fuchsia-700 shadow-inner relative">
+									<div
+										className="h-full bg-fuchsia-500 transition-all duration-200"
+										style={{
+											width: `${Math.min(
+												comboCount,
+												100
+											)}%`, // 20 max → 100%
+										}}
+									/>
+
+									{/* Tiers (tabs) */}
+									{[20, 40, 70, 100].map((threshold) => (
+										<div
+											key={threshold}
+											className="absolute top-0 bottom-0 w-0.5 bg-fuchsia-300 opacity-60"
+											style={{
+												left: `${threshold}%`,
+											}}
+										></div>
+									))}
+								</div>
+							</div>
 
 							<div className="flex justify-center items-center w-full mt-3">
 								<Button

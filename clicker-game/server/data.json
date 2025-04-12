@@ -1,31 +1,33 @@
 {
-  "clickCount": 1124,
-  "gold": 682.6999999999961,
-  "clickPower": 14,
-  "autoClickers": 2,
+  "clickCount": 11334,
+  "gold": 197240.55,
+  "clickPower": 30,
+  "autoClickers": 11,
   "megaClickers": 0,
   "clickPowerLevel": 0,
   "autoClickerLevel": 0,
   "megaClickerLevel": 0,
   "upgradeLevels": {
-    "clickPower": 9,
-    "goldenTouch": 2,
-    "precisionTapping": 3,
-    "autoClicker": 2,
-    "autoClickerSpeed": 1
+    "clickPower": 15,
+    "goldenTouch": 6,
+    "precisionTapping": 6,
+    "autoClicker": 11,
+    "autoClickerSpeed": 3
   },
-  "autoClickerInterval": 875,
+  "autoClickerInterval": 825,
   "cheatsUsed": true,
   "completedMilestones": [
     "clicks100",
     "gold500",
     "upgrades5",
-    "clicks1000"
+    "clicks1000",
+    "gold5000",
+    "clicks10000"
   ],
-  "goldEarned": 2843.3999999999946,
-  "goldMultiplier": 1.1,
+  "goldEarned": 189320.55,
+  "goldMultiplier": 1.375,
   "clickMultiplier": 1,
   "megaClickerInterval": 1000,
-  "criticalChance": 0.08,
-  "criticalMultiplier": 3
+  "criticalChance": 0.10999999999999999,
+  "criticalMultiplier": 5
 }
