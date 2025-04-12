@@ -1,6 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { type GameState } from '@/App';
+import CheatCard from './CheatCard';
 
 export type CheatSectionProps = {
 	state: GameState;
@@ -8,33 +7,32 @@ export type CheatSectionProps = {
 };
 
 function CheatSection({ state, ws }: CheatSectionProps) {
+	const handleUseCheat = (cheatId: string) => {
+		ws?.send(
+			JSON.stringify({
+				type: 'use-cheat',
+				cheatId: cheatId,
+			})
+		);
+	};
+
 	return (
-		<Card className="w-full max-w-md text-center">
-			<CardHeader>
-				<CardTitle className="text-3xl">Cheats</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-4">
+		<div className="space-y-3">
+			<h3 className="text-lg font-semibold border-b border-slate-700 pb-2 mb-2">
+				Cheats
+			</h3>
+			<div className="grid grid-cols-1 gap-3">
 				{state.cheats.map((cheat) => (
-					<Button
+					<CheatCard
 						key={cheat.id}
-						onClick={() => {
-							ws?.send(
-								JSON.stringify({
-									type: 'use-cheat',
-									cheatId: cheat.id,
-								})
-							);
-						}}
-						className="w-full"
-					>
-						{cheat.name}
-						<div className="text-xs text-muted-foreground">
-							{cheat.description}
-						</div>
-					</Button>
+						id={cheat.id}
+						name={cheat.name}
+						description={cheat.description}
+						onUse={handleUseCheat}
+					/>
 				))}
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	);
 }
 

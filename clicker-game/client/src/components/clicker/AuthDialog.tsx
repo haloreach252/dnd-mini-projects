@@ -21,9 +21,9 @@ export default function AuthDialog({
 }) {
 	return (
 		<Dialog open={isOpen}>
-			<DialogContent>
+			<DialogContent className="bg-slate-900 border-slate-700 text-slate-200 shadow-xl">
 				<DialogHeader>
-					<DialogTitle>
+					<DialogTitle className="text-slate-200 text-xl">
 						{mode === 'login' ? 'Login' : 'Register'}
 					</DialogTitle>
 				</DialogHeader>
@@ -32,21 +32,24 @@ export default function AuthDialog({
 						placeholder="Username"
 						value={input}
 						onChange={(e) => setInput(e.target.value)}
+						className="bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500"
 					/>
 					<Input
 						type="password"
 						placeholder="Password"
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
+						className="bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500"
 					/>
 					{authError && (
-						<p className="text-sm text-red-500 text-center">
+						<p className="text-sm text-red-400 text-center">
 							{authError}
 						</p>
 					)}
 					<Button
 						onClick={submit}
 						disabled={!input.trim() || !password.trim()}
+						className="bg-blue-600 hover:bg-blue-700 text-white"
 					>
 						{mode === 'login' ? 'Login' : 'Register'}
 					</Button>
@@ -54,7 +57,7 @@ export default function AuthDialog({
 						onClick={() =>
 							setMode(mode === 'login' ? 'register' : 'login')
 						}
-						className="text-xs text-muted-foreground hover:underline"
+						className="text-xs text-blue-400 hover:underline"
 					>
 						{mode === 'login'
 							? "Don't have an account? Register"

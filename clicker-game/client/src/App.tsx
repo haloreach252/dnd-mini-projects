@@ -9,6 +9,8 @@ import AuthDialog from './components/clicker/AuthDialog';
 import { useAuth } from './hooks/useAuth';
 import { useWebSocket } from './hooks/useWebSocket';
 import MilestoneSection from './components/clicker/MilestoneSection';
+import StatsDisplay from './components/clicker/StatsDisplay';
+import ClickEffect from './components/clicker/ClickEffect';
 
 export type GameState = {
 	clickCount: number;
@@ -150,7 +152,7 @@ export default function App() {
 		if (ws?.readyState === WebSocket.OPEN) {
 			ws.send(JSON.stringify({ type: 'click' }));
 
-			const rect = (e.target as HTMLElement).getBoundingClientRect();
+			//const rect = (e.target as HTMLElement).getBoundingClientRect();
 			const effect = {
 				id: Date.now(),
 				x: e.clientX,
@@ -169,91 +171,115 @@ export default function App() {
 	};
 
 	return (
-		<div className="flex">
-			<main className="min-h-screen flex flex-col items-center justify-center p-4 gap-6 flex-1">
-				<Card className="w-full max-w-md text-center">
-					<CardHeader>
-						<CardTitle className="text-3xl">
-							🖱️ Real-Time Clicker <br />
-							{username && <span>{username}</span>}
-						</CardTitle>
-						<div
-							className={`text-sm ${
-								connectionStatus === 'connected'
-									? 'text-green-500'
-									: 'text-red-500'
-							}`}
-						>
-							{connectionStatus === 'connected'
-								? 'Connected'
-								: connectionStatus === 'connecting'
-								? 'Connecting...'
-								: 'Disconnected'}
-						</div>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<p className="text-lg">
-							Total Clicks:{' '}
-							<span className="font-bold">
-								{gameState.clickCount}
-							</span>
-						</p>
-						<p className="text-sm text-muted-foreground">
-							Gold: {gameState.gold} | Click Power:{' '}
-							{gameState.clickPower} | Auto-Clickers:{' '}
-							{gameState.autoClickers}
-						</p>
-						<Button
-							onClick={handleClick}
-							className="w-full text-lg py-6"
-							disabled={
-								connectionStatus !== 'connected' || !isLoggedIn
-							}
-						>
-							Click Me!
-						</Button>
-					</CardContent>
-				</Card>
+		<div className="flex h-screen bg-slate-900 text-slate-200 overflow-hidden">
+			{/* Left Column - Upgrades and Cheats */}
+			<div className="w-80 border-r border-slate-700 flex flex-col bg-slate-900">
+				<div className="p-3 border-b border-slate-700">
+					<h2 className="text-xl font-bold text-center">Game Shop</h2>
+				</div>
+				<div className="flex-1 overflow-y-auto p-3 space-y-4">
+					<UpgradeSection state={gameState} ws={ws} />
+					<CheatSection state={gameState} ws={ws} />
+				</div>
+			</div>
 
+			{/* Main Game Area */}
+			<main className="flex-1 flex flex-col overflow-hidden bg-slate-950">
+				<div className="flex-1 flex flex-col items-center justify-center p-4">
+					<Card className="w-full max-w-md text-center border-slate-700 bg-slate-900 shadow-lg">
+						<CardHeader className="py-3">
+							<CardTitle className="text-2xl text-slate-100">
+								🖱️ Real-Time Clicker
+								{username && (
+									<span className="text-blue-400 ml-2">
+										{username}
+									</span>
+								)}
+							</CardTitle>
+							<div
+								className={`text-sm ${
+									connectionStatus === 'connected'
+										? 'text-green-400'
+										: 'text-red-400'
+								}`}
+							>
+								{connectionStatus === 'connected'
+									? 'Connected'
+									: connectionStatus === 'connecting'
+									? 'Connecting...'
+									: 'Disconnected'}
+							</div>
+						</CardHeader>
+						<CardContent className="space-y-4 py-3">
+							<StatsDisplay state={gameState} />
+
+							<div className="flex justify-center items-center w-full mt-3">
+								<Button
+									onClick={handleClick}
+									className="h-64 w-64 py-5 bg-transparent hover:bg-blue-700/20 border-0 flex items-center justify-center"
+									disabled={
+										connectionStatus !== 'connected' ||
+										!isLoggedIn
+									}
+								>
+									<img
+										src="/coin.png"
+										alt="Coin"
+										className="h-full w-full object-contain hover:scale-110 transition-transform duration-200"
+									/>
+								</Button>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+
+				{/* Click effects */}
 				{clickEffects.map((fx) => (
-					<motion.div
+					<ClickEffect
 						key={fx.id}
-						initial={{ opacity: 1, y: 0 }}
-						animate={{ opacity: 0, y: -40 }}
-						transition={{ duration: 1 }}
-						className="pointer-events-none fixed text-white text-xl font-bold select-none"
-						style={{ left: fx.x, top: fx.y }}
-					>
-						{fx.text}
-					</motion.div>
+						id={fx.id}
+						x={fx.x}
+						y={fx.y}
+						value={gameState.clickPower}
+					/>
 				))}
 
-				<UpgradeSection state={gameState} ws={ws} />
-				<MilestoneSection state={gameState} />
-				<CheatSection state={gameState} ws={ws} />
-
+				{/* System Messages */}
 				<div
 					ref={messagesRef}
-					className="w-full max-w-md h-32 overflow-auto bg-muted text-sm p-2 rounded"
+					className="h-24 overflow-y-auto bg-slate-800 text-sm p-2 border-t border-slate-700"
 				>
-					{messages.map((msg, i) => (
-						<p key={i} className="text-muted-foreground italic">
-							{msg.message}
-						</p>
-					))}
+					<h3 className="font-bold mb-1 text-slate-300 text-xs uppercase">
+						System Messages
+					</h3>
+					<div className="space-y-1">
+						{messages.map((msg, i) => (
+							<p
+								key={i}
+								className="text-slate-400 italic text-xs"
+							>
+								{msg.message}
+							</p>
+						))}
+					</div>
 				</div>
 			</main>
 
-			<div
-				ref={actionRef}
-				className="fixed right-0 top-0 h-screen w-72 bg-muted/20 border-l border-border p-4 overflow-y-auto text-sm space-y-2"
-			>
-				<h2 className="font-bold text-lg mb-2">📜 Game Log</h2>
-				{actionLog.map((entry, i) => (
-					<p key={i} className="text-muted-foreground">
-						{entry.message}
-					</p>
-				))}
+			{/* Right Column - Game Log */}
+			<div className="w-64 border-l border-slate-700 flex flex-col bg-slate-900">
+				<div className="p-3 border-b border-slate-700">
+					<h2 className="font-bold text-slate-200">📜 Game Log</h2>
+				</div>
+				<div
+					ref={actionRef}
+					className="flex-1 overflow-y-auto p-3 text-sm space-y-1"
+				>
+					{actionLog.map((entry, i) => (
+						<p key={i} className="text-slate-400 text-xs">
+							{entry.message}
+						</p>
+					))}
+				</div>
 			</div>
 
 			{isLoggedIn && (

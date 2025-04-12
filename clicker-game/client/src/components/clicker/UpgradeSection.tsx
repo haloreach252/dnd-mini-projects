@@ -1,6 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { GameState } from '@/App';
+import UpgradeCard from './UpgradeCard';
 
 type UpgradeSectionProps = {
 	state: GameState;
@@ -8,34 +7,35 @@ type UpgradeSectionProps = {
 };
 
 export default function UpgradeSection({ state, ws }: UpgradeSectionProps) {
+	const handlePurchase = (upgradeId: string) => {
+		ws?.send(
+			JSON.stringify({
+				type: 'purchase-upgrade',
+				upgradeId: upgradeId,
+			})
+		);
+	};
+
 	return (
-		<Card className="w-full max-w-md text-center">
-			<CardHeader>
-				<CardTitle className="text-3xl">Upgrades</CardTitle>
-			</CardHeader>
-			<CardContent className="space-y-4">
+		<div className="space-y-3">
+			<h3 className="text-lg font-semibold border-b border-slate-700 pb-2 mb-2">
+				Upgrades
+			</h3>
+			<div className="grid grid-cols-1 gap-3">
 				{state.upgrades.map((upgrade) => (
-					<Button
+					<UpgradeCard
 						key={upgrade.id}
-						onClick={() =>
-							ws?.send(
-								JSON.stringify({
-									type: 'purchase-upgrade',
-									upgradeId: upgrade.id,
-								})
-							)
-						}
-						disabled={!upgrade.canBuy || state.gold < upgrade.cost}
-						className="w-full"
-					>
-						{upgrade.name} (Lv. {upgrade.level}) – {upgrade.cost}{' '}
-						Gold
-						<div className="text-xs text-muted-foreground">
-							{upgrade.description}
-						</div>
-					</Button>
+						id={upgrade.id}
+						name={upgrade.name}
+						description={upgrade.description}
+						cost={upgrade.cost}
+						level={upgrade.level}
+						canBuy={upgrade.canBuy}
+						gold={state.gold}
+						onPurchase={handlePurchase}
+					/>
 				))}
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	);
 }
