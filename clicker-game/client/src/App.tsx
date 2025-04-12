@@ -3,13 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import {
 	Dialog,
-	DialogTrigger,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
+import CheatSection from './components/clicker/CheatSection';
+import UpgradeSection from './components/clicker/UpgradeSection';
 
 type Message = {
 	type: 'system';
@@ -28,14 +29,41 @@ type ClickEffect = {
 	text: string;
 };
 
-type GameState = {
+export type GameState = {
 	clickCount: number;
 	gold: number;
 	clickPower: number;
 	autoClickers: number;
+	upgrades: {
+		id: string;
+		name: string;
+		description: string;
+		cost: number;
+		level: number;
+		canBuy: boolean;
+	}[];
+	cheats: {
+		id: string;
+		name: string;
+		description: string;
+	}[];
+};
+
+const defaultGameState: GameState = {
+	clickCount: 0,
+	gold: 0,
+	clickPower: 1,
+	autoClickers: 0,
+	upgrades: [],
+	cheats: [],
 };
 
 function App() {
+	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	const [mode, setMode] = useState<'login' | 'register'>('login');
+	const [password, setPassword] = useState('');
+	const [authError, setAuthError] = useState('');
+
 	const [ws, setWs] = useState<WebSocket | null>(null);
 	const [username, setUsername] = useState('');
 	const [input, setInput] = useState('');
@@ -45,12 +73,7 @@ function App() {
 	const [actionLog, setActionLog] = useState<ActionMessage[]>([]);
 	const actionRef = useRef<HTMLDivElement | null>(null);
 
-	const [gameState, setGameState] = useState<GameState>({
-		clickCount: 0,
-		gold: 0,
-		clickPower: 1,
-		autoClickers: 0,
-	});
+	const [gameState, setGameState] = useState<GameState>(defaultGameState);
 
 	const messagesRef = useRef<HTMLDivElement | null>(null);
 
@@ -66,6 +89,25 @@ function App() {
 
 		socket.onmessage = (event) => {
 			const data = JSON.parse(event.data);
+			if (data.type === 'login-success') {
+				setUsername(data.username);
+				setIsLoggedIn(true);
+				setDialogOpen(false);
+				setAuthError('');
+			}
+
+			if (data.type === 'register-success') {
+				setMode('login');
+				setAuthError('Account created. You can now log in.');
+			}
+
+			if (
+				data.type === 'login-failure' ||
+				data.type === 'register-failure'
+			) {
+				setAuthError(data.reason || 'An error occurred');
+			}
+
 			if (data.type === 'init' || data.type === 'update') {
 				setGameState(data.state);
 			} else if (data.type === 'system') {
@@ -86,12 +128,6 @@ function App() {
 			actionRef.current.scrollTop = actionRef.current.scrollHeight;
 		}
 	}, [actionLog]);
-
-	const registerUsername = () => {
-		setUsername(input);
-		setDialogOpen(false);
-		ws?.send(JSON.stringify({ type: 'register', username: input }));
-	};
 
 	const handleClick = (e: React.MouseEvent) => {
 		if (ws?.readyState === WebSocket.OPEN) {
@@ -120,7 +156,8 @@ function App() {
 				<Card className="w-full max-w-md text-center">
 					<CardHeader>
 						<CardTitle className="text-3xl">
-							🖱️ Real-Time Clicker
+							🖱️ Real-Time Clicker <br />
+							{username}
 						</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-4">
@@ -158,39 +195,9 @@ function App() {
 					</motion.div>
 				))}
 
-				<Card className="w-full max-w-md text-center">
-					<CardHeader>
-						<CardTitle className="text-3xl">Upgrades</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-2">
-						<Button
-							onClick={() =>
-								ws?.send(
-									JSON.stringify({
-										type: 'upgrade-click-power',
-									})
-								)
-							}
-							disabled={gameState.gold < 50}
-							className="w-full"
-						>
-							Upgrade Click Power (+1) – 50 Gold
-						</Button>
-						<Button
-							onClick={() =>
-								ws?.send(
-									JSON.stringify({
-										type: 'upgrade-auto-clicker',
-									})
-								)
-							}
-							disabled={gameState.gold < 100}
-							className="w-full"
-						>
-							Buy Auto Clicker (+1) – 100 Gold
-						</Button>
-					</CardContent>
-				</Card>
+				<UpgradeSection state={gameState} ws={ws} />
+
+				<CheatSection state={gameState} ws={ws} />
 
 				<div
 					ref={messagesRef}
@@ -217,27 +224,62 @@ function App() {
 				))}
 			</div>
 
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+			<Dialog open={!isLoggedIn} onOpenChange={setDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Enter your username</DialogTitle>
+						<DialogTitle>
+							{mode === 'login' ? 'Login' : 'Register'}
+						</DialogTitle>
 					</DialogHeader>
 					<div className="flex flex-col gap-4">
 						<Input
-							placeholder="e.g., EldritchWanderer"
+							placeholder="Username"
 							value={input}
 							onChange={(e) => setInput(e.target.value)}
-							onKeyDown={(e) => {
-								if (e.key === 'Enter' && input.trim())
-									registerUsername();
-							}}
 						/>
+						<Input
+							type="password"
+							placeholder="Password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+						/>
+
+						{authError && (
+							<p className="text-sm text-red-500 text-center">
+								{authError}
+							</p>
+						)}
+
 						<Button
-							onClick={registerUsername}
-							disabled={!input.trim()}
+							onClick={() => {
+								ws?.send(
+									JSON.stringify({
+										type:
+											mode === 'login'
+												? 'login-user'
+												: 'register-user',
+										username: input,
+										password,
+									})
+								);
+							}}
+							disabled={!input.trim() || !password.trim()}
 						>
-							Join
+							{mode === 'login' ? 'Login' : 'Register'}
 						</Button>
+
+						<button
+							onClick={() =>
+								setMode((prev) =>
+									prev === 'login' ? 'register' : 'login'
+								)
+							}
+							className="text-xs text-muted-foreground hover:underline"
+						>
+							{mode === 'login'
+								? "Don't have an account? Register"
+								: 'Already have an account? Login'}
+						</button>
 					</div>
 				</DialogContent>
 			</Dialog>

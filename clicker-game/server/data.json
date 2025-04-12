@@ -1,6 +1,11 @@
 {
-  "clickCount": 1600121,
-  "gold": 227443073,
-  "clickPower": 147,
-  "autoClickers": 100
+  "clickCount": 0,
+  "gold": 0,
+  "clickPower": 1,
+  "autoClickers": 0,
+  "clickPowerLevel": 0,
+  "autoClickerLevel": 0,
+  "upgradeLevels": {},
+  "autoClickerInterval": 1000,
+  "cheatsUsed": true
 }
