@@ -28,15 +28,62 @@ const upgradeRegistry = {
 		name: 'Auto Clicker Speed',
 		description: 'Makes auto clickers activate faster',
 		baseCost: 1000,
-		costMultiplier: 2.75,
+		costMultiplier: 2.2,
 		visibleIf: (state) => state.upgradeLevels?.autoClicker >= 1,
 		purchasableIf: (state) => state.upgradeLevels?.autoClicker >= 1,
 		effect: (state, startAutoClickers) => {
 			state.autoClickerInterval = Math.max(
-				state.autoClickerInterval - 100,
-				100
+				state.autoClickerInterval - 25,
+				50
 			);
 			startAutoClickers();
+		},
+	},
+	megaClicker: {
+		id: 'megaClicker',
+		name: 'Mega Clicker',
+		description: 'Adds 50 auto clicks per second',
+		baseCost: 1000000,
+		costMultiplier: 1.55,
+		visibleIf: (state) => {
+			return (
+				state.upgradeLevels?.autoClicker >= 25 &&
+				state.clickCount >= 5000
+			);
+		},
+		purchasableIf: (state) => {
+			return (
+				state.upgradeLevels?.autoClicker >= 25 &&
+				state.clickCount >= 5000
+			);
+		},
+		effect: (state) => {
+			state.megaClickers += 1;
+		},
+	},
+	clickMultiplier: {
+		id: 'clickMultiplier',
+		name: 'Click Multiplier',
+		description: 'Multiplies click power by 5',
+		baseCost: 500000,
+		costMultiplier: 1,
+		visibleIf: (state) => {
+			return (
+				state.upgradeLevels?.clickPower >= 25 &&
+				state.clickCount >= 5000 &&
+				!state.upgradeLevels?.clickMultiplier
+			);
+		},
+		purchasableIf: (state) => {
+			return (
+				state.upgradeLevels?.clickPower >= 25 &&
+				state.clickCount >= 5000 &&
+				!state.upgradeLevels?.clickMultiplier
+			);
+		},
+		effect: (state) => {
+			// Add 4 because it brings the multiplier to 5
+			state.clickMultiplier += 4;
 		},
 	},
 };

@@ -68,6 +68,10 @@ function broadcast(data) {
 	});
 }
 
+function getClickPower() {
+	return state.clickPower * state.clickMultiplier;
+}
+
 wss.on('connection', (ws) => {
 	ws.send(JSON.stringify({ type: 'init', state: getStateWithCosts() }));
 
@@ -197,9 +201,9 @@ wss.on('connection', (ws) => {
 					break;
 
 				case 'click': {
-					state.clickCount++;
+					state.clickCount += state.clickMultiplier;
 					// Apply gold multiplier
-					state.gold += state.clickPower * state.goldMultiplier;
+					state.gold += getClickPower() * state.goldMultiplier;
 
 					// Check for new milestones
 					const newMilestones = checkMilestones(state);
@@ -211,7 +215,7 @@ wss.on('connection', (ws) => {
 					broadcast({
 						type: 'action',
 						message: `${clients.get(ws) || 'Someone'} clicked (+${
-							state.clickPower * state.goldMultiplier
+							getClickPower() * state.goldMultiplier
 						})`,
 					});
 
@@ -285,11 +289,14 @@ wss.on('connection', (ws) => {
 });
 
 let autoClickerTimer = null;
+let megaClickTimer = null;
 
 function startAutoClickers() {
 	if (autoClickerTimer) clearInterval(autoClickerTimer);
+	if (megaClickTimer) clearInterval(megaClickTimer);
 
-	const interval = state.autoClickerInterval || 1000;
+	const autoClickInterval = state.autoClickerInterval || 1000;
+	const megaClickInterval = state.megaClickerInterval || 1000;
 
 	autoClickerTimer = setInterval(() => {
 		if (state.autoClickers > 0) {
@@ -304,7 +311,21 @@ function startAutoClickers() {
 				})`,
 			});
 		}
-	}, interval);
+	}, autoClickInterval);
+
+	megaClickTimer = setInterval(() => {
+		if (state.megaClickers > 0) {
+			const mega = state.megaClickers * 50;
+			state.clickCount += mega;
+			state.gold += mega * getClickPower();
+
+			broadcast({ type: 'update', state: getStateWithCosts() });
+			broadcast({
+				type: 'action',
+				message: `Mega clickers clicked (+${mega * getClickPower()})`,
+			});
+		}
+	}, megaClickInterval);
 }
 
 startAutoClickers();
