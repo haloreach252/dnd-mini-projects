@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import { motion } from 'framer-motion';
 
 import CheatSection from './components/clicker/CheatSection';
 import UpgradeSection from './components/clicker/UpgradeSection';
@@ -147,23 +146,27 @@ export default function App() {
 			actionRef.current.scrollTop = actionRef.current.scrollHeight;
 		}
 	}, [actionLog]);
-
 	const handleClick = (e: React.MouseEvent) => {
 		if (ws?.readyState === WebSocket.OPEN) {
 			ws.send(JSON.stringify({ type: 'click' }));
 
-			//const rect = (e.target as HTMLElement).getBoundingClientRect();
 			const effect = {
 				id: Date.now(),
 				x: e.clientX,
 				y: e.clientY,
 				text: `+${gameState.clickPower}`,
 			};
-			setClickEffects((prev) => [...prev, effect]);
+
+			setClickEffects((prev) => {
+				const newEffects = [...prev, effect];
+				return newEffects;
+			});
+
 			setTimeout(() => {
-				setClickEffects((prev) =>
-					prev.filter((fx) => fx.id !== effect.id)
-				);
+				setClickEffects((prev) => {
+					const newEffects = prev.filter((fx) => fx.id !== effect.id);
+					return newEffects;
+				});
 			}, 1000);
 		} else {
 			console.warn('WebSocket not connected');
