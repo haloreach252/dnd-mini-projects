@@ -7,6 +7,7 @@ export interface DialogueRequest {
     sceneContext?: string;
     expectedLength?: number;
     lineStyle?: "short" | "normal" | "long";
+    model?: "openrouter/optimus-alpha" | "deepseek/deepseek-chat-v3-0324:free" | "deepseek/deepseek-r1:free";
 }
 
 export interface DialogueResponse {
@@ -31,7 +32,8 @@ export const useDialogueStore = create<DialogueStore>((set) => ({
         personality: '',
         sceneContext: '',
         expectedLength: 2,
-        lineStyle: 'normal'
+        lineStyle: 'normal',
+        model: "deepseek/deepseek-chat-v3-0324:free",
     },
     response: null,
     loading: false,
@@ -49,7 +51,8 @@ export const useDialogueStore = create<DialogueStore>((set) => ({
                 personality: '',
                 sceneContext: '',
                 expectedLength: 2,
-                lineStyle: 'normal'
+                lineStyle: 'normal',
+                model: "deepseek/deepseek-chat-v3-0324:free",
             },
             response: null,
             loading: false,

@@ -11,6 +11,11 @@ export const dialogueSchema = z.object({
     .max(3, "Maximum 3 lines")
     .optional(),
     lineStyle: z.enum(["short", "normal", "long"]).optional(),
+    model: z.enum([
+        "openrouter/optimus-alpha",
+        "deepseek/deepseek-chat-v3-0324:free",
+        "deepseek/deepseek-r1:free"
+    ])
 });
 
 export type DialogueSchema = z.infer<typeof dialogueSchema>;

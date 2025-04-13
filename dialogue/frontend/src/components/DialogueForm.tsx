@@ -130,6 +130,42 @@ export function DialogueForm() {
             />
           </div>
 
+            {/* Line Length Style */}
+            <div>
+            <Label htmlFor="lineStyle">Line Style</Label>
+            <Select
+                onValueChange={(val) => form.setValue('lineStyle', val as any)}
+                defaultValue={form.getValues('lineStyle') || 'normal'}
+            >
+                <SelectTrigger>
+                <SelectValue placeholder="Select line style" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="short">Short</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="long">Long</SelectItem>
+                </SelectContent>
+            </Select>
+            </div>
+
+            {/* Model Selector */}
+            <div>
+            <Label htmlFor="model">Model</Label>
+            <Select
+                onValueChange={(val) => form.setValue('model', val as any)}
+                defaultValue={form.getValues('model') || 'deepseek/deepseek-chat-v3-0324:free'}
+            >
+                <SelectTrigger>
+                <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="openrouter/optimus-alpha">Optimus Alpha</SelectItem>
+                <SelectItem value="deepseek/deepseek-chat-v3-0324:free">Deepseek</SelectItem>
+                <SelectItem value="deepseek/deepseek-r1:free">Deepseek Reasoning</SelectItem>
+                </SelectContent>
+            </Select>
+            </div>
+
           <Button type="submit" className="w-full">
             Generate Dialogue
           </Button>

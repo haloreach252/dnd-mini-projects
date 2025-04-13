@@ -11,19 +11,31 @@ const DialogueRequestSchema = z.object({
   npcRole: z.string().min(1),
   personality: z.string().min(1),
   sceneContext: z.string().optional(),
-  expectedLength: z.number().min(1).max(3).optional()
+  expectedLength: z.number().min(1).max(3).optional(),
+  lineStyle: z.enum(["short", "normal", "long"]).optional(),
+  model: z.enum([
+    "openrouter/optimus-alpha",
+    "deepseek/deepseek-chat-v3-0324:free",
+    "deepseek/deepseek-r1:free"
+  ])
 });
 
-function extractFirstJsonBlock(text) {
-  // Remove markdown-style code block wrappers like ```json ... ```
-  const cleaned = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/, '$1');
+function extractFirstJsonBlock(raw) {
+  // Remove markdown fences like ```json ... ```
+  const cleaned = raw
+    .replace(/```(?:json)?/, '') // remove opening ```json
+    .replace(/```/, '') // remove closing ```
+    .trim();
 
-  const match = cleaned.match(/\{[\s\S]*?\}/);
-  if (!match) throw new Error("No valid JSON found in model response");
-
-  return JSON.parse(match[0]);
+  // Now try parsing the cleaned string
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.error("Failed to parse cleaned response:");
+    console.error(cleaned);
+    throw new Error("Model returned invalid JSON.");
+  }
 }
-
 
 router.post('/generate', async (ctx) => {
   try {
@@ -33,7 +45,7 @@ router.post('/generate', async (ctx) => {
     const res = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'deepseek/deepseek-chat-v3-0324:free',
+        model: parsed.model || 'deepseek/deepseek-chat-v3-0324:free',
         messages: [{ role: 'user', content: formattedPrompt }],
       },
       {
