@@ -15,10 +15,15 @@ const DialogueRequestSchema = z.object({
 });
 
 function extractFirstJsonBlock(text) {
-  const match = text.match(/\{[\s\S]*?\}/); // captures the first {...} block
+  // Remove markdown-style code block wrappers like ```json ... ```
+  const cleaned = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/, '$1');
+
+  const match = cleaned.match(/\{[\s\S]*?\}/);
   if (!match) throw new Error("No valid JSON found in model response");
+
   return JSON.parse(match[0]);
 }
+
 
 router.post('/generate', async (ctx) => {
   try {
